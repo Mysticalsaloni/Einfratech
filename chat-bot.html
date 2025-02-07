@@ -3,22 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Chatbot</title>
-    <link rel="stylesheet" href="css/chat-bot.css">
+    <link rel="stylesheet" href="css/style.css">
+    <title>Einfra Chatbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .chat-container {
+            width: 400px;
+            margin: 50px auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        .chat-window {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            background-color: #fafafa;
+        }
+
+        .messages {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .messages .message {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+
+        .profile-image {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .message-content {
+            background-color: #e9e9e9;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .user-message .message-content {
+            background-color: #d1e7dd; /* Light green for user messages */
+        }
+
+        .bot-message .message-content {
+            background-color: #f8d7da; /* Light red for bot messages */
+        }
+
+        input[type="text"] {
+            width: calc(100% - 80px);
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px;
+            border: none;
+            background-color: #5cb85c;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #4cae4c;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <div class="chat-header">
-            <h2>Einfratech Chatbot</h2>
+    <div class="chat-container">
+        <div class="chat-window" id="chatWindow">
+            <div class="messages" id="chat-messages"></div>
         </div>
-        <div class="chat-box" id="chat-box">
-        </div>
-        <div class="chat-input">
-            <input type="text" id="user-input" placeholder="Type a message...">
-            <button id="send-btn">Send</button>
-        </div>
+        <input type="text" id="user-input" placeholder="Type your message here..." />
+        <button id="send-button">Send</button>
     </div>
 
-    <script src="js/chat-bot.js"></script>
+    <script>
+        const API_KEY = 'AIzaSyCdzg3kqbknzwy5eqUmg8fw5nR1cBNpV6U';  // Replace with a secure method to store API keys
+        const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+
+        async function generateResponse(prompt) {
+            try {
+                const response = await fetch(`${API_URL}?key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [
+                            {
+                                parts: [
+                                    {
+                                        text: prompt
+                                    }
+                                ]
+                            }
+                        ]
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to generate response');
+                }
+
+                const data = await response.json();
+                return data.candidates[0]?.content?.parts[0]?.text || "Error: No response from AI.";
+            } catch (error) {
+                console.error(error);
+                return "An error occurred while fetching response.";
+            }
+        }
+
+        function cleanMarkdown(text) {
+            return text
+                .replace(/#{1,6}\s?/g, '')
+                .replace(/\\/g, '')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+        }
+
+        function addMessage(message, isUser) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', isUser ? 'user-message' : 'bot-message');
+
+            const profileImage = document.createElement('img');
+            profileImage.classList.add('profile-image');
+            profileImage.src = isUser ? './images/user.jpg' : './images/bot.png';
+            profileImage.alt = isUser ? 'User' : 'Bot';
+
+            const messageContent = document.createElement('div');
+            messageContent.classList.add('message-content');
+            messageContent.textContent = message;
+
+            messageElement.appendChild(profileImage);
+            messageElement.appendChild(messageContent);
+            chatMessages.appendChild(messageElement);
+
+            chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll to latest message
+        }
+
+        sendButton.addEventListener('click', async () => {
+            const userMessage = userInput.value.trim();
+            if (!userMessage) return;
+
+            addMessage(userMessage, true);
+            userInput.value = '';
+
+            const botResponse = await generateResponse(userMessage);
+            addMessage(cleanMarkdown(botResponse), false);
+        });
+
+        userInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                sendButton.click();
+            }
+        });
+    </script>
 </body>
 </html>
